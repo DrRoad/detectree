@@ -431,29 +431,28 @@ class Classifier(object):
             if clf is None:
                 raise ValueError(
                     "If using 'cluster-I' method, `clf` must be provided")
+            return self._classify_imgs(split_df['img_filepath'], clf,
+                                       output_dir)
+
+        if img_cluster is not None:
+            if clf is None:
+                if clf_dict is not None:
+                    clf = clf_dict[img_cluster]
+                else:
+                    raise ValueError(
+                        "Either `clf` or `clf_dict` must be provided")
+
             return self._classify_imgs(
-                split_df[~split_df['train']]['img_filepath'], clf, output_dir)
-        else:
-            if img_cluster is not None:
-                if clf is None:
-                    if clf_dict is not None:
-                        clf = clf_dict[img_cluster]
-                    else:
-                        raise ValueError(
-                            "Either `clf` or `clf_dict` must be provided")
+                utils.get_img_filepaths(split_df, img_cluster, False), clf,
+                output_dir)
 
-                return self._classify_imgs(
-                    utils.get_img_filepaths(split_df, img_cluster, False), clf,
-                    output_dir)
+        if clf_dict is None:
+            raise ValueError("If using 'cluster-II' method and not providing "
+                             "`img_cluster`, `clf_dict` must be provided")
+        pred_imgs = {}
+        for group_img_cluster, _ in split_df.groupby('img_cluster'):
+            pred_imgs[group_img_cluster] = self._classify_imgs(
+                utils.get_img_filepaths(split_df, group_img_cluster, False),
+                clf_dict[group_img_cluster], output_dir)
 
-            if clf_dict is None:
-                raise ValueError(
-                    "If using 'cluster-II' method and not providing "
-                    "`img_cluster`, `clf_dict` must be provided")
-            pred_imgs = {}
-            for img_cluster, img_cluster_df in split_df.groupby('img_cluster'):
-                pred_imgs[img_cluster] = self._classify_imgs(
-                    utils.get_img_filepaths(split_df, img_cluster, False),
-                    clf_dict[img_cluster], output_dir)
-
-            return pred_imgs
+        return pred_imgs
